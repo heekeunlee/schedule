@@ -1,7 +1,7 @@
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
 const PEOPLE = {
-  dawon: { name: "다원", color: "#ff4fa3" },
-  sechan: { name: "세찬", color: "#1b64f2" },
+  dawon: { name: "다원", character: "🐰", color: "#ff4fa3" },
+  sechan: { name: "세찬", character: "🐶", color: "#1b64f2" },
 };
 
 const versions = [
@@ -187,7 +187,7 @@ function renderDay(events) {
           <section class="day-panel" aria-label="${day}요일 일정">
             <div class="day-panel-head">
               <strong>${formatDayDate(day)}</strong>
-              <span>${PEOPLE[state.person].name}</span>
+              <span>${personLabel(state.person)}</span>
             </div>
             <div class="timeline">
               ${dayEvents.length ? dayEvents.map(eventCard).join("") : empty("일정이 없습니다.")}
@@ -204,7 +204,7 @@ function renderWeek(events) {
   content.innerHTML = `
     <div class="section-head">
       <div>
-        <h2>${PEOPLE[state.person].name}의 주간 일정</h2>
+        <h2>${personLabel(state.person)}의 주간 일정</h2>
       </div>
     </div>
     <div class="week-grid">
@@ -228,7 +228,7 @@ function eventCard(event) {
       <div class="time">${event.start} - ${event.end}</div>
       <div>
         <strong>${event.title}${current ? `<span class="live-badge">진행중</span>` : ""}</strong>
-        <span>${PEOPLE[event.person].name} · ${categoryLabel(event.category)}</span>
+        <span>${personLabel(event.person)} · ${categoryLabel(event.category)}</span>
       </div>
     </article>
   `;
@@ -238,7 +238,7 @@ function compactEvent(event) {
   return `
     <div class="compact-event ${event.category}" style="--accent:${PEOPLE[event.person].color}">
       <strong>${event.title}</strong>
-      <span>${event.start} - ${event.end} · ${PEOPLE[event.person].name}</span>
+      <span>${event.start} - ${event.end} · ${personLabel(event.person)}</span>
     </div>
   `;
 }
@@ -355,6 +355,10 @@ function categoryLabel(category) {
     art: "예술",
   };
   return labels[category] ?? "기타";
+}
+
+function personLabel(person) {
+  return `${PEOPLE[person].character} ${PEOPLE[person].name}`;
 }
 
 function empty(message) {

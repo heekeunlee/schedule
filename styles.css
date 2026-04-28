@@ -161,8 +161,9 @@ h1 {
   height: 46px;
   border-radius: 16px;
   color: #fff;
-  font-size: 18px;
+  font-size: 25px;
   font-weight: 950;
+  line-height: 1;
 }
 
 .avatar.dawon {
