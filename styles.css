@@ -225,6 +225,10 @@ h1 {
   text-overflow: ellipsis;
 }
 
+.status-panel strong.is-live {
+  color: var(--blue);
+}
+
 .status-panel span {
   color: var(--muted);
   font-size: 12px;
@@ -302,6 +306,21 @@ h1 {
     0 8px 20px rgba(30, 42, 62, 0.055);
 }
 
+.event-card.is-current {
+  position: relative;
+  border-color: rgba(27, 100, 242, 0.42);
+  background: #f7fbff;
+  box-shadow:
+    inset 5px 0 0 var(--blue),
+    0 0 0 3px rgba(27, 100, 242, 0.12),
+    0 16px 34px rgba(27, 100, 242, 0.18);
+  animation: currentPulse 1.35s ease-in-out infinite;
+}
+
+.event-card.is-current .time {
+  color: var(--blue);
+}
+
 .event-card .time {
   color: var(--accent);
   font-size: 17px;
@@ -314,6 +333,20 @@ h1 {
   display: block;
   font-size: 18px;
   line-height: 1.25;
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  margin-left: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--blue);
+  font-size: 12px;
+  font-weight: 900;
+  vertical-align: 2px;
 }
 
 .event-card span,
@@ -377,6 +410,31 @@ h1 {
 
 .compact-event.sports {
   background: #fff0f4;
+}
+
+@keyframes currentPulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow:
+      inset 5px 0 0 var(--blue),
+      0 0 0 3px rgba(27, 100, 242, 0.1),
+      0 16px 34px rgba(27, 100, 242, 0.16);
+  }
+
+  50% {
+    transform: translateY(-1px);
+    box-shadow:
+      inset 5px 0 0 var(--blue),
+      0 0 0 6px rgba(27, 100, 242, 0.18),
+      0 20px 42px rgba(27, 100, 242, 0.24);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .event-card.is-current {
+    animation: none;
+  }
 }
 
 .empty,

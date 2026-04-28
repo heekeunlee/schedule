@@ -222,11 +222,12 @@ function renderWeek(events) {
 }
 
 function eventCard(event) {
+  const current = isCurrentEvent(event);
   return `
-    <article class="event-card" style="--accent:${PEOPLE[event.person].color}">
+    <article class="event-card ${current ? "is-current" : ""}" style="--accent:${PEOPLE[event.person].color}">
       <div class="time">${event.start} - ${event.end}</div>
       <div>
-        <strong>${event.title}</strong>
+        <strong>${event.title}${current ? `<span class="live-badge">진행중</span>` : ""}</strong>
         <span>${PEOPLE[event.person].name} · ${categoryLabel(event.category)}</span>
       </div>
     </article>
@@ -268,7 +269,15 @@ function updateStatus(events) {
   const next = dayEvents.find((event) => toMinutes(event.start) > nowMinutes);
 
   currentStatus.textContent = current ? `${current.title} 진행중` : "진행중 없음";
+  currentStatus.classList.toggle("is-live", Boolean(current));
   nextStatus.textContent = next ? `${next.start} ${next.title}` : "남은 일정 없음";
+}
+
+function isCurrentEvent(event) {
+  if (event.day !== state.day) return false;
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  return toMinutes(event.start) <= nowMinutes && nowMinutes < toMinutes(event.end);
 }
 
 function connectDayCarousel() {
