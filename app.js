@@ -1,4 +1,26 @@
 const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
+const KOREAN_HOLIDAYS_2026 = new Set([
+  "2026-01-01",
+  "2026-02-16",
+  "2026-02-17",
+  "2026-02-18",
+  "2026-03-01",
+  "2026-03-02",
+  "2026-05-05",
+  "2026-05-24",
+  "2026-05-25",
+  "2026-06-03",
+  "2026-06-06",
+  "2026-08-15",
+  "2026-08-17",
+  "2026-09-24",
+  "2026-09-25",
+  "2026-09-26",
+  "2026-10-03",
+  "2026-10-05",
+  "2026-10-09",
+  "2026-12-25",
+]);
 const PEOPLE = {
   dawon: { name: "다원", character: "🐰", color: "#ff4fa3" },
   sechan: { name: "세찬", character: "🐶", color: "#1b64f2" },
@@ -22,7 +44,7 @@ const versions = [
       e("dawon", "수", "16:00", "17:00", "독서", "study"),
       e("dawon", "화", "19:00", "21:00", "수학", "math"),
       e("dawon", "목", "19:00", "21:00", "수학", "math"),
-      e("dawon", "토", "16:30", "17:30", "기타", "music"),
+      e("dawon", "수", "20:00", "20:50", "기타", "music"),
 
       e("sechan", "토", "10:00", "11:00", "독서", "study"),
       e("sechan", "토", "12:00", "14:50", "필즈", "math"),
@@ -39,6 +61,8 @@ const versions = [
       e("sechan", "수", "17:30", "19:00", "영어", "english"),
       e("sechan", "목", "17:30", "19:00", "해법", "math"),
       e("sechan", "금", "17:30", "19:00", "영어", "english"),
+      e("sechan", "화", "18:00", "18:20", "테니스", "sports", { effectiveFrom: "2026-05-01" }),
+      e("sechan", "목", "18:00", "18:20", "테니스", "sports", { effectiveFrom: "2026-05-01" }),
     ],
   },
   {
@@ -182,7 +206,7 @@ function renderDay(events) {
   content.innerHTML = `
     <div class="day-carousel" id="dayCarousel" aria-label="요일별 일간 일정">
       ${DAYS.map((day) => {
-        const dayEvents = sortEvents(events.filter((event) => event.day === day));
+        const dayEvents = eventsForDay(events, day);
         return `
           <section class="day-panel" aria-label="${day}요일 일정">
             <div class="day-panel-head">
@@ -190,7 +214,7 @@ function renderDay(events) {
               <span>${personLabel(state.person)}</span>
             </div>
             <div class="timeline">
-              ${dayEvents.length ? dayEvents.map(eventCard).join("") : empty("일정이 없습니다.")}
+              ${dayEvents.length ? dayEvents.map(eventCard).join("") : empty(emptyMessage(day))}
             </div>
           </section>
         `;
@@ -209,11 +233,11 @@ function renderWeek(events) {
     </div>
     <div class="week-grid">
       ${DAYS.map((day) => {
-        const dayEvents = sortEvents(events.filter((event) => event.day === day));
+        const dayEvents = eventsForDay(events, day);
         return `
           <article class="day-column">
             <h3>${day}</h3>
-            ${dayEvents.length ? dayEvents.map(compactEvent).join("") : `<span class="no-event">비어 있음</span>`}
+            ${dayEvents.length ? dayEvents.map(compactEvent).join("") : `<span class="no-event">${emptyMessage(day)}</span>`}
           </article>
         `;
       }).join("")}
@@ -248,10 +272,19 @@ function filteredEvents() {
   return events.filter((event) => event.person === state.person);
 }
 
+function eventsForDay(events, day) {
+  const date = dateForDay(day);
+  if (isOffDay(date)) return [];
+  return sortEvents(events.filter((event) => isEventActiveOn(event, date)));
+}
+
 function updateProfileCounts(events) {
   const today = currentDayName();
+  const todayDate = dateForDay(today);
   for (const person of Object.keys(PEOPLE)) {
-    const count = events.filter((event) => event.person === person && event.day === today).length;
+    const count = isOffDay(todayDate)
+      ? 0
+      : events.filter((event) => event.person === person && isEventActiveOn(event, todayDate)).length;
     const el = document.querySelector(`#${person}Today`);
     if (el) el.textContent = `오늘 ${count}개`;
   }
@@ -264,7 +297,7 @@ function activeVersion() {
 function updateStatus(events) {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const dayEvents = sortEvents(events.filter((event) => event.day === state.day));
+  const dayEvents = eventsForDay(events, state.day);
   const current = dayEvents.find((event) => toMinutes(event.start) <= nowMinutes && nowMinutes < toMinutes(event.end));
   const next = dayEvents.find((event) => toMinutes(event.start) > nowMinutes);
 
@@ -274,7 +307,8 @@ function updateStatus(events) {
 }
 
 function isCurrentEvent(event) {
-  if (event.day !== state.day) return false;
+  const date = dateForDay(state.day);
+  if (!isEventActiveOn(event, date)) return false;
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   return toMinutes(event.start) <= nowMinutes && nowMinutes < toMinutes(event.end);
@@ -311,8 +345,8 @@ function school(person, endsByDay) {
   return Object.entries(endsByDay).map(([day, end]) => e(person, day, "09:00", end, "학교수업", "school"));
 }
 
-function e(person, day, start, end, title, category) {
-  return { person, day, start, end, title, category };
+function e(person, day, start, end, title, category, options = {}) {
+  return { person, day, start, end, title, category, ...options };
 }
 
 function currentDayName() {
@@ -336,6 +370,31 @@ function dateForDay(day) {
   const today = new Date();
   const diff = DAYS.indexOf(day) - DAYS.indexOf(currentDayName());
   return new Date(today.getFullYear(), today.getMonth(), today.getDate() + diff);
+}
+
+function isEventActiveOn(event, date) {
+  if (event.day !== DAYS[(date.getDay() + 6) % 7]) return false;
+  if (isOffDay(date)) return false;
+  if (event.effectiveFrom && dateKey(date) < event.effectiveFrom) return false;
+  return true;
+}
+
+function isOffDay(date) {
+  return date.getDay() === 0 || KOREAN_HOLIDAYS_2026.has(dateKey(date));
+}
+
+function emptyMessage(day) {
+  const date = dateForDay(day);
+  if (date.getDay() === 0) return "일요일은 일정이 없습니다.";
+  if (KOREAN_HOLIDAYS_2026.has(dateKey(date))) return "공휴일은 일정이 없습니다.";
+  return "일정이 없습니다.";
+}
+
+function dateKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function toMinutes(time) {
