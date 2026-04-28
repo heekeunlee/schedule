@@ -1,123 +1,344 @@
-import * as pdfjs from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs";
-
-const PDF_URL = "assets/schedule_paper.pdf";
-
-const cropRegions = {
-  dawon: { x: 0.04, y: 0.075, width: 0.395, height: 0.855, title: "다원 스케줄" },
-  sechan: { x: 0.465, y: 0.075, width: 0.395, height: 0.855, title: "세찬 스케줄" },
-  all: { x: 0, y: 0, width: 1, height: 1, title: "전체 스케줄" },
+const DAYS = ["월", "화", "수", "목", "금", "토", "일"];
+const PEOPLE = {
+  dawon: { name: "다원", color: "#ff4fa3" },
+  sechan: { name: "세찬", color: "#1b64f2" },
 };
 
-const canvas = document.querySelector("#scheduleCanvas");
-const ctx = canvas.getContext("2d", { alpha: false });
-const canvasWrap = document.querySelector("#canvasWrap");
-const statusEl = document.querySelector("#renderStatus");
-const viewTitle = document.querySelector("#viewTitle");
-const pageNumber = document.querySelector("#pageNumber");
-const pageTotal = document.querySelector("#pageTotal");
-const prevPage = document.querySelector("#prevPage");
-const nextPage = document.querySelector("#nextPage");
-const modeButtons = [...document.querySelectorAll("[data-mode]")];
+const versions = [
+  {
+    id: "latest",
+    name: "최신표",
+    note: "PDF 4페이지 기준",
+    events: [
+      ...school("dawon", { 월: "14:30", 화: "14:30", 수: "13:50", 목: "14:30", 금: "14:30" }),
+      ...school("sechan", { 월: "13:50", 화: "13:50", 수: "13:50", 목: "14:30", 금: "13:50" }),
+      e("dawon", "토", "10:00", "11:00", "독서", "study"),
+      e("dawon", "토", "13:00", "15:00", "수학", "math"),
+      e("dawon", "수", "14:20", "15:30", "배드민턴", "sports"),
+      e("dawon", "월", "16:20", "19:05", "엠폴리", "english"),
+      e("dawon", "금", "16:20", "19:05", "엠폴리", "english"),
+      e("dawon", "화", "15:30", "17:30", "수영", "sports"),
+      e("dawon", "목", "15:30", "17:30", "수영", "sports"),
+      e("dawon", "수", "16:00", "17:00", "독서", "study"),
+      e("dawon", "화", "19:00", "21:00", "수학", "math"),
+      e("dawon", "목", "19:00", "21:00", "수학", "math"),
+      e("dawon", "토", "16:30", "17:30", "기타", "music"),
 
-let pdfDocument;
-let currentPage = 1;
-let currentMode = "dawon";
-let renderToken = 0;
+      e("sechan", "토", "10:00", "11:00", "독서", "study"),
+      e("sechan", "토", "12:00", "14:50", "필즈", "math"),
+      e("sechan", "월", "14:00", "15:30", "해법", "math"),
+      e("sechan", "수", "14:20", "15:30", "로봇과학", "science"),
+      e("sechan", "금", "14:40", "15:50", "생명과학", "science"),
+      e("sechan", "화", "15:30", "17:30", "수영", "sports"),
+      e("sechan", "목", "15:30", "17:30", "수영", "sports"),
+      e("sechan", "월", "16:00", "16:25", "드럼", "music"),
+      e("sechan", "토", "16:00", "16:25", "드럼", "music"),
+      e("sechan", "수", "16:20", "17:20", "독서", "study"),
+      e("sechan", "월", "17:30", "19:00", "영어", "english"),
+      e("sechan", "화", "17:30", "19:00", "해법", "math"),
+      e("sechan", "수", "17:30", "19:00", "영어", "english"),
+      e("sechan", "목", "17:30", "19:00", "해법", "math"),
+      e("sechan", "금", "17:30", "19:00", "영어", "english"),
+    ],
+  },
+  {
+    id: "alt1",
+    name: "스케줄 A",
+    note: "PDF 1페이지 기준",
+    events: [
+      ...school("dawon", { 월: "14:30", 화: "14:30", 수: "13:50", 목: "14:30", 금: "14:30" }),
+      ...school("sechan", { 월: "13:50", 화: "13:50", 수: "13:50", 목: "14:30", 금: "13:50" }),
+      e("dawon", "토", "10:00", "11:00", "독서", "study"),
+      e("dawon", "토", "13:00", "15:00", "수학", "math"),
+      e("dawon", "수", "14:20", "15:30", "배드민턴", "sports"),
+      e("dawon", "월", "16:20", "19:05", "엠폴리", "english"),
+      e("dawon", "금", "16:20", "19:05", "엠폴리", "english"),
+      e("dawon", "화", "15:30", "17:30", "수영", "sports"),
+      e("dawon", "목", "15:30", "17:30", "수영", "sports"),
+      e("dawon", "수", "16:00", "17:00", "독서", "study"),
+      e("dawon", "화", "19:00", "21:00", "수학", "math"),
+      e("dawon", "목", "19:00", "21:00", "수학", "math"),
+      e("dawon", "수", "20:00", "20:50", "기타", "music"),
 
-const setStatus = (text) => {
-  statusEl.textContent = text;
+      e("sechan", "토", "10:00", "11:00", "독서", "study"),
+      e("sechan", "토", "12:00", "14:50", "필즈", "math"),
+      e("sechan", "월", "14:30", "15:00", "드럼", "music"),
+      e("sechan", "화", "14:30", "15:30", "독서", "study"),
+      e("sechan", "수", "14:20", "15:30", "로봇과학", "science"),
+      e("sechan", "목", "15:00", "15:30", "드럼", "music"),
+      e("sechan", "금", "14:40", "15:50", "생명과학", "science"),
+      e("sechan", "월", "15:30", "18:00", "영어", "english"),
+      e("sechan", "화", "16:00", "17:30", "해법", "math"),
+      e("sechan", "수", "16:30", "17:30", "해법", "math"),
+      e("sechan", "목", "16:00", "17:30", "해법", "math"),
+      e("sechan", "금", "16:30", "17:30", "해법", "math"),
+      e("sechan", "화", "18:00", "18:30", "테니스", "sports"),
+      e("sechan", "목", "18:00", "18:30", "테니스", "sports"),
+    ],
+  },
+  {
+    id: "alt2",
+    name: "스케줄 B",
+    note: "PDF 3페이지 기준",
+    events: [
+      e("dawon", "월", "10:30", "11:30", "독서", "study"),
+      e("dawon", "화", "10:30", "11:30", "독서", "study"),
+      e("dawon", "수", "10:30", "11:30", "독서", "study"),
+      e("dawon", "목", "10:30", "11:30", "독서", "study"),
+      e("dawon", "금", "10:30", "11:30", "독서", "study"),
+      e("dawon", "월", "13:00", "16:30", "도서관", "study"),
+      e("dawon", "수", "13:00", "16:30", "도서관", "study"),
+      e("dawon", "금", "13:00", "16:30", "도서관", "study"),
+      e("dawon", "목", "14:00", "15:30", "미술", "art"),
+      e("dawon", "화", "16:00", "17:00", "수영", "sports"),
+      e("dawon", "목", "16:00", "17:00", "수영", "sports"),
+      e("dawon", "금", "16:20", "17:10", "기타", "music"),
+      e("dawon", "월", "17:30", "19:30", "이자경수학", "math"),
+      e("dawon", "수", "17:30", "19:30", "이자경수학", "math"),
+      e("dawon", "금", "17:30", "19:30", "이자경수학", "math"),
+      e("dawon", "화", "18:10", "20:50", "영어", "english"),
+      e("dawon", "일", "17:00", "19:00", "영어", "english"),
+
+      e("sechan", "월", "10:30", "11:30", "독서", "study"),
+      e("sechan", "화", "10:30", "11:30", "독서", "study"),
+      e("sechan", "수", "10:30", "11:30", "독서", "study"),
+      e("sechan", "목", "10:30", "11:30", "독서", "study"),
+      e("sechan", "금", "10:30", "11:30", "독서", "study"),
+      e("sechan", "토", "12:00", "14:50", "필즈수학", "math"),
+      e("sechan", "월", "13:00", "14:20", "해법수학", "math"),
+      e("sechan", "화", "13:00", "14:00", "태권도", "sports"),
+      e("sechan", "수", "13:00", "14:00", "태권도", "sports"),
+      e("sechan", "목", "13:00", "14:00", "태권도", "sports"),
+      e("sechan", "금", "13:00", "14:00", "태권도", "sports"),
+      e("sechan", "월", "15:30", "18:00", "영어학원", "english"),
+      e("sechan", "금", "15:30", "18:00", "영어학원", "english"),
+      e("sechan", "화", "16:00", "17:20", "해법수학", "math"),
+      e("sechan", "수", "16:00", "17:20", "해법수학", "math"),
+      e("sechan", "목", "16:00", "17:20", "해법수학", "math"),
+      e("sechan", "월", "18:30", "19:00", "드럼", "music"),
+      e("sechan", "수", "18:30", "19:00", "드럼", "music"),
+      e("sechan", "금", "18:30", "19:00", "드럼", "music"),
+      e("sechan", "월", "19:30", "20:00", "눈높이", "study"),
+    ],
+  },
+];
+
+const state = {
+  view: "day",
+  person: "all",
+  version: "latest",
+  day: currentDayName(),
+  month: new Date().toISOString().slice(0, 7),
 };
 
-const updateControls = () => {
-  const total = pdfDocument?.numPages ?? 4;
-  pageNumber.textContent = String(currentPage);
-  pageTotal.textContent = `/ ${total}`;
-  prevPage.disabled = currentPage <= 1;
-  nextPage.disabled = currentPage >= total;
+const content = document.querySelector("#content");
+const personSelect = document.querySelector("#personSelect");
+const versionSelect = document.querySelector("#versionSelect");
+const daySelect = document.querySelector("#daySelect");
+const monthSelect = document.querySelector("#monthSelect");
+const dayField = document.querySelector("#dayField");
+const monthField = document.querySelector("#monthField");
+const summaryCount = document.querySelector("#summaryCount");
+const summaryNext = document.querySelector("#summaryNext");
+const viewButtons = [...document.querySelectorAll("[data-view]")];
 
-  modeButtons.forEach((button) => {
-    const active = button.dataset.mode === currentMode;
-    button.classList.toggle("is-active", active);
-    button.setAttribute("aria-selected", String(active));
-  });
+init();
 
-  viewTitle.textContent = cropRegions[currentMode].title;
-  canvasWrap.classList.toggle("is-wide", currentMode === "all");
-};
+function init() {
+  versionSelect.innerHTML = versions.map((version) => `<option value="${version.id}">${version.name}</option>`).join("");
+  daySelect.innerHTML = DAYS.map((day) => `<option value="${day}">${day}</option>`).join("");
+  personSelect.value = state.person;
+  versionSelect.value = state.version;
+  daySelect.value = state.day;
+  monthSelect.value = state.month;
 
-const drawPage = async () => {
-  if (!pdfDocument) return;
+  viewButtons.forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
+  personSelect.addEventListener("change", () => updateState("person", personSelect.value));
+  versionSelect.addEventListener("change", () => updateState("version", versionSelect.value));
+  daySelect.addEventListener("change", () => updateState("day", daySelect.value));
+  monthSelect.addEventListener("change", () => updateState("month", monthSelect.value));
 
-  const token = ++renderToken;
-  setStatus("불러오는 중");
-  updateControls();
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  }
 
-  const page = await pdfDocument.getPage(currentPage);
-  if (token !== renderToken) return;
-
-  const baseViewport = page.getViewport({ scale: 1 });
-  const targetWidth = currentMode === "all" ? 2200 : 1450;
-  const scale = targetWidth / (baseViewport.width * cropRegions[currentMode].width);
-  const viewport = page.getViewport({ scale });
-  const offscreen = document.createElement("canvas");
-  const offscreenCtx = offscreen.getContext("2d", { alpha: false });
-
-  offscreen.width = Math.floor(viewport.width);
-  offscreen.height = Math.floor(viewport.height);
-
-  await page.render({ canvasContext: offscreenCtx, viewport }).promise;
-  if (token !== renderToken) return;
-
-  const crop = cropRegions[currentMode];
-  const sx = Math.floor(offscreen.width * crop.x);
-  const sy = Math.floor(offscreen.height * crop.y);
-  const sw = Math.floor(offscreen.width * crop.width);
-  const sh = Math.floor(offscreen.height * crop.height);
-
-  canvas.width = sw;
-  canvas.height = sh;
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, sw, sh);
-  ctx.drawImage(offscreen, sx, sy, sw, sh, 0, 0, sw, sh);
-  setStatus("완료");
-};
-
-const changePage = (delta) => {
-  if (!pdfDocument) return;
-  const next = Math.min(Math.max(currentPage + delta, 1), pdfDocument.numPages);
-  if (next === currentPage) return;
-  currentPage = next;
-  drawPage();
-};
-
-modeButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    currentMode = button.dataset.mode;
-    drawPage();
-  });
-});
-
-prevPage.addEventListener("click", () => changePage(-1));
-nextPage.addEventListener("click", () => changePage(1));
-
-window.addEventListener("keydown", (event) => {
-  if (event.key === "ArrowLeft") changePage(-1);
-  if (event.key === "ArrowRight") changePage(1);
-});
-
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  render();
 }
 
-pdfjs.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";
+function setView(view) {
+  state.view = view;
+  render();
+}
 
-pdfjs
-  .getDocument(PDF_URL)
-  .promise.then((doc) => {
-    pdfDocument = doc;
-    updateControls();
-    return drawPage();
-  })
-  .catch(() => {
-    setStatus("PDF를 불러오지 못했습니다");
-  });
+function updateState(key, value) {
+  state[key] = value;
+  render();
+}
+
+function render() {
+  viewButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.view === state.view));
+  dayField.hidden = state.view !== "day";
+  monthField.hidden = state.view !== "month";
+
+  const events = filteredEvents();
+  summaryCount.textContent = String(events.length);
+  summaryNext.textContent = nextEvent(events)?.title ?? "-";
+
+  if (state.view === "day") renderDay(events);
+  if (state.view === "week") renderWeek(events);
+  if (state.view === "month") renderMonth(events);
+}
+
+function renderDay(events) {
+  const dayEvents = sortEvents(events.filter((event) => event.day === state.day));
+  content.innerHTML = `
+    <div class="section-head">
+      <div>
+        <p>${activeVersion().note}</p>
+        <h2>${state.day}요일</h2>
+      </div>
+    </div>
+    <div class="timeline">
+      ${dayEvents.length ? dayEvents.map(eventCard).join("") : empty("선택한 조건의 일정이 없습니다.")}
+    </div>
+  `;
+}
+
+function renderWeek(events) {
+  content.innerHTML = `
+    <div class="section-head">
+      <div>
+        <p>${activeVersion().note}</p>
+        <h2>주간 일정</h2>
+      </div>
+    </div>
+    <div class="week-grid">
+      ${DAYS.map((day) => {
+        const dayEvents = sortEvents(events.filter((event) => event.day === day));
+        return `
+          <article class="day-column">
+            <h3>${day}</h3>
+            ${dayEvents.length ? dayEvents.map(compactEvent).join("") : `<span class="no-event">비어 있음</span>`}
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderMonth(events) {
+  const [year, month] = state.month.split("-").map(Number);
+  const first = new Date(year, month - 1, 1);
+  const last = new Date(year, month, 0);
+  const startOffset = (first.getDay() + 6) % 7;
+  const cells = [];
+
+  for (let i = 0; i < startOffset; i += 1) cells.push(null);
+  for (let date = 1; date <= last.getDate(); date += 1) cells.push(new Date(year, month - 1, date));
+
+  content.innerHTML = `
+    <div class="section-head">
+      <div>
+        <p>${activeVersion().note}</p>
+        <h2>${year}년 ${month}월</h2>
+      </div>
+    </div>
+    <div class="month-days">${DAYS.map((day) => `<span>${day}</span>`).join("")}</div>
+    <div class="month-grid">
+      ${cells.map((date) => {
+        if (!date) return `<div class="month-cell muted-cell"></div>`;
+        const day = DAYS[(date.getDay() + 6) % 7];
+        const dayEvents = sortEvents(events.filter((event) => event.day === day));
+        return `
+          <article class="month-cell">
+            <strong>${date.getDate()}</strong>
+            ${dayEvents.slice(0, 4).map(monthEvent).join("")}
+            ${dayEvents.length > 4 ? `<em>+${dayEvents.length - 4}</em>` : ""}
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function eventCard(event) {
+  return `
+    <article class="event-card" style="--accent:${PEOPLE[event.person].color}">
+      <div class="time">${event.start} - ${event.end}</div>
+      <div>
+        <strong>${event.title}</strong>
+        <span>${PEOPLE[event.person].name} · ${categoryLabel(event.category)}</span>
+      </div>
+    </article>
+  `;
+}
+
+function compactEvent(event) {
+  return `
+    <div class="compact-event ${event.category}" style="--accent:${PEOPLE[event.person].color}">
+      <strong>${event.title}</strong>
+      <span>${event.start} - ${event.end} · ${PEOPLE[event.person].name}</span>
+    </div>
+  `;
+}
+
+function monthEvent(event) {
+  return `<small style="--accent:${PEOPLE[event.person].color}">${event.start} ${event.title}</small>`;
+}
+
+function filteredEvents() {
+  const events = activeVersion().events;
+  if (state.person === "all") return events;
+  return events.filter((event) => event.person === state.person);
+}
+
+function activeVersion() {
+  return versions.find((version) => version.id === state.version) ?? versions[0];
+}
+
+function nextEvent(events) {
+  const today = currentDayName();
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const todayEvents = sortEvents(events.filter((event) => event.day === today && toMinutes(event.start) >= nowMinutes));
+  return todayEvents[0] ?? sortEvents(events)[0];
+}
+
+function sortEvents(events) {
+  return [...events].sort((a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day) || toMinutes(a.start) - toMinutes(b.start));
+}
+
+function school(person, endsByDay) {
+  return Object.entries(endsByDay).map(([day, end]) => e(person, day, "09:00", end, "학교수업", "school"));
+}
+
+function e(person, day, start, end, title, category) {
+  return { person, day, start, end, title, category };
+}
+
+function currentDayName() {
+  return DAYS[(new Date().getDay() + 6) % 7];
+}
+
+function toMinutes(time) {
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+function categoryLabel(category) {
+  const labels = {
+    school: "학교",
+    study: "학습",
+    math: "수학",
+    english: "영어",
+    sports: "운동",
+    science: "과학",
+    music: "음악",
+    art: "예술",
+  };
+  return labels[category] ?? "기타";
+}
+
+function empty(message) {
+  return `<div class="empty">${message}</div>`;
+}
