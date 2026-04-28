@@ -128,22 +128,19 @@ const state = {
   person: "dawon",
   version: "latest",
   day: currentDayName(),
-  month: new Date().toISOString().slice(0, 7),
 };
 
 const content = document.querySelector("#content");
 const versionSelect = document.querySelector("#versionSelect");
 const daySelect = document.querySelector("#daySelect");
-const monthSelect = document.querySelector("#monthSelect");
 const dayField = document.querySelector("#dayField");
-const monthField = document.querySelector("#monthField");
+const weekToggle = document.querySelector("#weekToggle");
 const heroTitle = document.querySelector("#heroTitle");
 const todayText = document.querySelector("#todayText");
 const summaryCount = document.querySelector("#summaryCount");
 const summaryCountLabel = document.querySelector("#summaryCountLabel");
 const summaryNext = document.querySelector("#summaryNext");
 const personButtons = [...document.querySelectorAll("[data-person]")];
-const viewButtons = [...document.querySelectorAll("[data-view]")];
 
 init();
 
@@ -152,14 +149,12 @@ function init() {
   daySelect.innerHTML = DAYS.map((day) => `<option value="${day}">${day}</option>`).join("");
   versionSelect.value = state.version;
   daySelect.value = state.day;
-  monthSelect.value = state.month;
   todayText.textContent = formatToday();
 
   personButtons.forEach((button) => button.addEventListener("click", () => updateState("person", button.dataset.person)));
-  viewButtons.forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
+  weekToggle.addEventListener("click", () => setView(state.view === "day" ? "week" : "day"));
   versionSelect.addEventListener("change", () => updateState("version", versionSelect.value));
   daySelect.addEventListener("change", () => updateState("day", daySelect.value));
-  monthSelect.addEventListener("change", () => updateState("month", monthSelect.value));
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js").catch(() => {});
@@ -181,21 +176,20 @@ function updateState(key, value) {
 function render() {
   const versionEvents = activeVersion().events;
   personButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.person === state.person));
-  viewButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.view === state.view));
   dayField.hidden = state.view !== "day";
-  monthField.hidden = state.view !== "month";
+  weekToggle.textContent = state.view === "day" ? "주간 보기" : "일간 보기";
+  weekToggle.classList.toggle("is-week", state.view === "week");
   heroTitle.textContent = `${PEOPLE[state.person].name} 스케줄`;
   updateProfileCounts(versionEvents);
 
   const events = filteredEvents();
   const visibleEvents = visibleEventsForSummary(events);
   summaryCount.textContent = String(visibleEvents.length);
-  summaryCountLabel.textContent = state.view === "day" ? `${state.day}요일 일정` : state.view === "week" ? "주간 일정" : "월간 반복 일정";
+  summaryCountLabel.textContent = state.view === "day" ? `${state.day}요일 일정` : "주간 일정";
   summaryNext.textContent = nextEvent(events)?.title ?? "-";
 
   if (state.view === "day") renderDay(events);
   if (state.view === "week") renderWeek(events);
-  if (state.view === "month") renderMonth(events);
 }
 
 function renderDay(events) {
@@ -235,41 +229,6 @@ function renderWeek(events) {
   `;
 }
 
-function renderMonth(events) {
-  const [year, month] = state.month.split("-").map(Number);
-  const first = new Date(year, month - 1, 1);
-  const last = new Date(year, month, 0);
-  const startOffset = (first.getDay() + 6) % 7;
-  const cells = [];
-
-  for (let i = 0; i < startOffset; i += 1) cells.push(null);
-  for (let date = 1; date <= last.getDate(); date += 1) cells.push(new Date(year, month - 1, date));
-
-  content.innerHTML = `
-    <div class="section-head">
-      <div>
-        <p>${activeVersion().name} · ${activeVersion().note}</p>
-        <h2>${PEOPLE[state.person].name} · ${year}년 ${month}월</h2>
-      </div>
-    </div>
-    <div class="month-days">${DAYS.map((day) => `<span>${day}</span>`).join("")}</div>
-    <div class="month-grid">
-      ${cells.map((date) => {
-        if (!date) return `<div class="month-cell muted-cell"></div>`;
-        const day = DAYS[(date.getDay() + 6) % 7];
-        const dayEvents = sortEvents(events.filter((event) => event.day === day));
-        return `
-          <article class="month-cell">
-            <strong>${date.getDate()}</strong>
-            ${dayEvents.slice(0, 4).map(monthEvent).join("")}
-            ${dayEvents.length > 4 ? `<em>+${dayEvents.length - 4}</em>` : ""}
-          </article>
-        `;
-      }).join("")}
-    </div>
-  `;
-}
-
 function eventCard(event) {
   return `
     <article class="event-card" style="--accent:${PEOPLE[event.person].color}">
@@ -289,10 +248,6 @@ function compactEvent(event) {
       <span>${event.start} - ${event.end} · ${PEOPLE[event.person].name}</span>
     </div>
   `;
-}
-
-function monthEvent(event) {
-  return `<small style="--accent:${PEOPLE[event.person].color}">${event.start} ${event.title}</small>`;
 }
 
 function filteredEvents() {

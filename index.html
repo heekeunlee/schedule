@@ -39,12 +39,6 @@
       </section>
 
       <section class="filters" aria-label="스케줄 보기 설정">
-        <div class="segmented" role="tablist" aria-label="보기 선택">
-          <button class="segment is-active" type="button" data-view="day">일간</button>
-          <button class="segment" type="button" data-view="week">주간</button>
-          <button class="segment" type="button" data-view="month">월간</button>
-        </div>
-
         <div class="control-row">
           <label>
             <span>표</span>
@@ -54,10 +48,7 @@
             <span>요일</span>
             <select id="daySelect"></select>
           </label>
-          <label id="monthField">
-            <span>월</span>
-            <input id="monthSelect" type="month" />
-          </label>
+          <button class="week-toggle" id="weekToggle" type="button">주간 보기</button>
         </div>
       </section>
 
