@@ -15,7 +15,10 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Schedule</p>
-          <h1 id="heroTitle">다원 스케줄</h1>
+          <div class="title-row">
+            <h1>오늘의 스케줄</h1>
+            <button class="week-toggle" id="weekToggle" type="button">주간</button>
+          </div>
           <p class="today-text" id="todayText"></p>
         </div>
         <a class="pdf-link" href="assets/schedule_paper.pdf" target="_blank" rel="noreferrer">원본 PDF</a>
@@ -38,29 +41,15 @@
         </button>
       </section>
 
-      <section class="filters" aria-label="스케줄 보기 설정">
-        <div class="control-row">
-          <label>
-            <span>표</span>
-            <select id="versionSelect"></select>
-          </label>
-          <label id="dayField">
-            <span>요일</span>
-            <select id="daySelect"></select>
-          </label>
-          <button class="week-toggle" id="weekToggle" type="button">주간 보기</button>
-        </div>
-      </section>
-
-      <section class="summary" aria-label="요약">
-        <div>
-          <strong id="summaryCount">0</strong>
-          <span id="summaryCountLabel">오늘 일정</span>
-        </div>
-        <div>
-          <strong id="summaryNext">-</strong>
-          <span>다음 일정</span>
-        </div>
+      <section class="status-panel" aria-label="일정 상태">
+        <article>
+          <span>현재일정</span>
+          <strong id="currentStatus">진행중 없음</strong>
+        </article>
+        <article>
+          <span>다음 일정알림</span>
+          <strong id="nextStatus">-</strong>
+        </article>
       </section>
 
       <section class="content" id="content" aria-live="polite"></section>

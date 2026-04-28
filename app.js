@@ -131,30 +131,20 @@ const state = {
 };
 
 const content = document.querySelector("#content");
-const versionSelect = document.querySelector("#versionSelect");
-const daySelect = document.querySelector("#daySelect");
-const dayField = document.querySelector("#dayField");
 const weekToggle = document.querySelector("#weekToggle");
-const heroTitle = document.querySelector("#heroTitle");
 const todayText = document.querySelector("#todayText");
-const summaryCount = document.querySelector("#summaryCount");
-const summaryCountLabel = document.querySelector("#summaryCountLabel");
-const summaryNext = document.querySelector("#summaryNext");
+const currentStatus = document.querySelector("#currentStatus");
+const nextStatus = document.querySelector("#nextStatus");
 const personButtons = [...document.querySelectorAll("[data-person]")];
+let carouselScrollTimer;
 
 init();
 
 function init() {
-  versionSelect.innerHTML = versions.map((version) => `<option value="${version.id}">${version.name}</option>`).join("");
-  daySelect.innerHTML = DAYS.map((day) => `<option value="${day}">${day}</option>`).join("");
-  versionSelect.value = state.version;
-  daySelect.value = state.day;
-  todayText.textContent = formatToday();
+  updateDateText();
 
   personButtons.forEach((button) => button.addEventListener("click", () => updateState("person", button.dataset.person)));
   weekToggle.addEventListener("click", () => setView(state.view === "day" ? "week" : "day"));
-  versionSelect.addEventListener("change", () => updateState("version", versionSelect.value));
-  daySelect.addEventListener("change", () => updateState("day", daySelect.value));
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js").catch(() => {});
@@ -176,42 +166,44 @@ function updateState(key, value) {
 function render() {
   const versionEvents = activeVersion().events;
   personButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.person === state.person));
-  dayField.hidden = state.view !== "day";
-  weekToggle.textContent = state.view === "day" ? "주간 보기" : "일간 보기";
+  weekToggle.textContent = state.view === "day" ? "주간" : "일간";
   weekToggle.classList.toggle("is-week", state.view === "week");
-  heroTitle.textContent = `${PEOPLE[state.person].name} 스케줄`;
+  updateDateText();
   updateProfileCounts(versionEvents);
 
   const events = filteredEvents();
-  const visibleEvents = visibleEventsForSummary(events);
-  summaryCount.textContent = String(visibleEvents.length);
-  summaryCountLabel.textContent = state.view === "day" ? `${state.day}요일 일정` : "주간 일정";
-  summaryNext.textContent = nextEvent(events)?.title ?? "-";
+  updateStatus(events);
 
   if (state.view === "day") renderDay(events);
   if (state.view === "week") renderWeek(events);
 }
 
 function renderDay(events) {
-  const dayEvents = sortEvents(events.filter((event) => event.day === state.day));
   content.innerHTML = `
-    <div class="section-head">
-      <div>
-        <p>${activeVersion().name} · ${activeVersion().note}</p>
-        <h2>${PEOPLE[state.person].name}의 ${state.day}요일</h2>
-      </div>
-    </div>
-    <div class="timeline">
-      ${dayEvents.length ? dayEvents.map(eventCard).join("") : empty("선택한 조건의 일정이 없습니다.")}
+    <div class="day-carousel" id="dayCarousel" aria-label="요일별 일간 일정">
+      ${DAYS.map((day) => {
+        const dayEvents = sortEvents(events.filter((event) => event.day === day));
+        return `
+          <section class="day-panel" aria-label="${day}요일 일정">
+            <div class="day-panel-head">
+              <strong>${formatDayDate(day)}</strong>
+              <span>${PEOPLE[state.person].name}</span>
+            </div>
+            <div class="timeline">
+              ${dayEvents.length ? dayEvents.map(eventCard).join("") : empty("일정이 없습니다.")}
+            </div>
+          </section>
+        `;
+      }).join("")}
     </div>
   `;
+  connectDayCarousel();
 }
 
 function renderWeek(events) {
   content.innerHTML = `
     <div class="section-head">
       <div>
-        <p>${activeVersion().name} · ${activeVersion().note}</p>
         <h2>${PEOPLE[state.person].name}의 주간 일정</h2>
       </div>
     </div>
@@ -255,11 +247,6 @@ function filteredEvents() {
   return events.filter((event) => event.person === state.person);
 }
 
-function visibleEventsForSummary(events) {
-  if (state.view === "day") return events.filter((event) => event.day === state.day);
-  return events;
-}
-
 function updateProfileCounts(events) {
   const today = currentDayName();
   for (const person of Object.keys(PEOPLE)) {
@@ -273,12 +260,38 @@ function activeVersion() {
   return versions.find((version) => version.id === state.version) ?? versions[0];
 }
 
-function nextEvent(events) {
-  const today = currentDayName();
+function updateStatus(events) {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const todayEvents = sortEvents(events.filter((event) => event.day === today && toMinutes(event.start) >= nowMinutes));
-  return todayEvents[0] ?? sortEvents(events)[0];
+  const dayEvents = sortEvents(events.filter((event) => event.day === state.day));
+  const current = dayEvents.find((event) => toMinutes(event.start) <= nowMinutes && nowMinutes < toMinutes(event.end));
+  const next = dayEvents.find((event) => toMinutes(event.start) > nowMinutes);
+
+  currentStatus.textContent = current ? `${current.title} 진행중` : "진행중 없음";
+  nextStatus.textContent = next ? `${next.start} ${next.title}` : "남은 일정 없음";
+}
+
+function connectDayCarousel() {
+  const carousel = document.querySelector("#dayCarousel");
+  if (!carousel) return;
+
+  const index = DAYS.indexOf(state.day);
+  requestAnimationFrame(() => {
+    carousel.scrollLeft = carousel.clientWidth * index;
+  });
+
+  carousel.addEventListener("scroll", () => {
+    window.clearTimeout(carouselScrollTimer);
+    carouselScrollTimer = window.setTimeout(() => {
+      const nextIndex = Math.round(carousel.scrollLeft / carousel.clientWidth);
+      const nextDay = DAYS[Math.min(Math.max(nextIndex, 0), DAYS.length - 1)];
+      if (nextDay !== state.day) {
+        state.day = nextDay;
+        updateDateText();
+        updateStatus(filteredEvents());
+      }
+    }, 80);
+  });
 }
 
 function sortEvents(events) {
@@ -297,13 +310,23 @@ function currentDayName() {
   return DAYS[(new Date().getDay() + 6) % 7];
 }
 
-function formatToday() {
+function updateDateText() {
+  todayText.textContent = formatDayDate(state.day);
+}
+
+function formatDayDate(day) {
   const formatter = new Intl.DateTimeFormat("ko-KR", {
     month: "long",
     day: "numeric",
     weekday: "long",
   });
-  return formatter.format(new Date());
+  return formatter.format(dateForDay(day));
+}
+
+function dateForDay(day) {
+  const today = new Date();
+  const diff = DAYS.indexOf(day) - DAYS.indexOf(currentDayName());
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate() + diff);
 }
 
 function toMinutes(time) {
