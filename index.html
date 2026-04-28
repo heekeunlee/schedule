@@ -15,34 +15,41 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Schedule</p>
-          <h1>다원 · 세찬</h1>
+          <h1 id="heroTitle">다원 스케줄</h1>
+          <p class="today-text" id="todayText"></p>
         </div>
         <a class="pdf-link" href="assets/schedule_paper.pdf" target="_blank" rel="noreferrer">원본 PDF</a>
       </header>
 
-      <section class="filters" aria-label="스케줄 필터">
+      <section class="profile-panel" aria-label="사람 선택">
+        <button class="profile-card is-active" type="button" data-person="dawon">
+          <span class="avatar dawon">다</span>
+          <span>
+            <strong>다원</strong>
+            <small id="dawonToday">오늘 0개</small>
+          </span>
+        </button>
+        <button class="profile-card" type="button" data-person="sechan">
+          <span class="avatar sechan">세</span>
+          <span>
+            <strong>세찬</strong>
+            <small id="sechanToday">오늘 0개</small>
+          </span>
+        </button>
+      </section>
+
+      <section class="filters" aria-label="스케줄 보기 설정">
         <div class="segmented" role="tablist" aria-label="보기 선택">
           <button class="segment is-active" type="button" data-view="day">일간</button>
           <button class="segment" type="button" data-view="week">주간</button>
           <button class="segment" type="button" data-view="month">월간</button>
         </div>
 
-        <div class="field-row">
-          <label>
-            <span>사람</span>
-            <select id="personSelect">
-              <option value="all">전체</option>
-              <option value="dawon">다원</option>
-              <option value="sechan">세찬</option>
-            </select>
-          </label>
+        <div class="control-row">
           <label>
             <span>표</span>
             <select id="versionSelect"></select>
           </label>
-        </div>
-
-        <div class="field-row">
           <label id="dayField">
             <span>요일</span>
             <select id="daySelect"></select>
@@ -57,7 +64,7 @@
       <section class="summary" aria-label="요약">
         <div>
           <strong id="summaryCount">0</strong>
-          <span>개 일정</span>
+          <span id="summaryCountLabel">오늘 일정</span>
         </div>
         <div>
           <strong id="summaryNext">-</strong>

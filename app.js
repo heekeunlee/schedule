@@ -125,21 +125,24 @@ const versions = [
 
 const state = {
   view: "day",
-  person: "all",
+  person: "dawon",
   version: "latest",
   day: currentDayName(),
   month: new Date().toISOString().slice(0, 7),
 };
 
 const content = document.querySelector("#content");
-const personSelect = document.querySelector("#personSelect");
 const versionSelect = document.querySelector("#versionSelect");
 const daySelect = document.querySelector("#daySelect");
 const monthSelect = document.querySelector("#monthSelect");
 const dayField = document.querySelector("#dayField");
 const monthField = document.querySelector("#monthField");
+const heroTitle = document.querySelector("#heroTitle");
+const todayText = document.querySelector("#todayText");
 const summaryCount = document.querySelector("#summaryCount");
+const summaryCountLabel = document.querySelector("#summaryCountLabel");
 const summaryNext = document.querySelector("#summaryNext");
+const personButtons = [...document.querySelectorAll("[data-person]")];
 const viewButtons = [...document.querySelectorAll("[data-view]")];
 
 init();
@@ -147,13 +150,13 @@ init();
 function init() {
   versionSelect.innerHTML = versions.map((version) => `<option value="${version.id}">${version.name}</option>`).join("");
   daySelect.innerHTML = DAYS.map((day) => `<option value="${day}">${day}</option>`).join("");
-  personSelect.value = state.person;
   versionSelect.value = state.version;
   daySelect.value = state.day;
   monthSelect.value = state.month;
+  todayText.textContent = formatToday();
 
+  personButtons.forEach((button) => button.addEventListener("click", () => updateState("person", button.dataset.person)));
   viewButtons.forEach((button) => button.addEventListener("click", () => setView(button.dataset.view)));
-  personSelect.addEventListener("change", () => updateState("person", personSelect.value));
   versionSelect.addEventListener("change", () => updateState("version", versionSelect.value));
   daySelect.addEventListener("change", () => updateState("day", daySelect.value));
   monthSelect.addEventListener("change", () => updateState("month", monthSelect.value));
@@ -176,12 +179,18 @@ function updateState(key, value) {
 }
 
 function render() {
+  const versionEvents = activeVersion().events;
+  personButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.person === state.person));
   viewButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.view === state.view));
   dayField.hidden = state.view !== "day";
   monthField.hidden = state.view !== "month";
+  heroTitle.textContent = `${PEOPLE[state.person].name} 스케줄`;
+  updateProfileCounts(versionEvents);
 
   const events = filteredEvents();
-  summaryCount.textContent = String(events.length);
+  const visibleEvents = visibleEventsForSummary(events);
+  summaryCount.textContent = String(visibleEvents.length);
+  summaryCountLabel.textContent = state.view === "day" ? `${state.day}요일 일정` : state.view === "week" ? "주간 일정" : "월간 반복 일정";
   summaryNext.textContent = nextEvent(events)?.title ?? "-";
 
   if (state.view === "day") renderDay(events);
@@ -194,8 +203,8 @@ function renderDay(events) {
   content.innerHTML = `
     <div class="section-head">
       <div>
-        <p>${activeVersion().note}</p>
-        <h2>${state.day}요일</h2>
+        <p>${activeVersion().name} · ${activeVersion().note}</p>
+        <h2>${PEOPLE[state.person].name}의 ${state.day}요일</h2>
       </div>
     </div>
     <div class="timeline">
@@ -208,8 +217,8 @@ function renderWeek(events) {
   content.innerHTML = `
     <div class="section-head">
       <div>
-        <p>${activeVersion().note}</p>
-        <h2>주간 일정</h2>
+        <p>${activeVersion().name} · ${activeVersion().note}</p>
+        <h2>${PEOPLE[state.person].name}의 주간 일정</h2>
       </div>
     </div>
     <div class="week-grid">
@@ -239,8 +248,8 @@ function renderMonth(events) {
   content.innerHTML = `
     <div class="section-head">
       <div>
-        <p>${activeVersion().note}</p>
-        <h2>${year}년 ${month}월</h2>
+        <p>${activeVersion().name} · ${activeVersion().note}</p>
+        <h2>${PEOPLE[state.person].name} · ${year}년 ${month}월</h2>
       </div>
     </div>
     <div class="month-days">${DAYS.map((day) => `<span>${day}</span>`).join("")}</div>
@@ -288,8 +297,21 @@ function monthEvent(event) {
 
 function filteredEvents() {
   const events = activeVersion().events;
-  if (state.person === "all") return events;
   return events.filter((event) => event.person === state.person);
+}
+
+function visibleEventsForSummary(events) {
+  if (state.view === "day") return events.filter((event) => event.day === state.day);
+  return events;
+}
+
+function updateProfileCounts(events) {
+  const today = currentDayName();
+  for (const person of Object.keys(PEOPLE)) {
+    const count = events.filter((event) => event.person === person && event.day === today).length;
+    const el = document.querySelector(`#${person}Today`);
+    if (el) el.textContent = `오늘 ${count}개`;
+  }
 }
 
 function activeVersion() {
@@ -318,6 +340,15 @@ function e(person, day, start, end, title, category) {
 
 function currentDayName() {
   return DAYS[(new Date().getDay() + 6) % 7];
+}
+
+function formatToday() {
+  const formatter = new Intl.DateTimeFormat("ko-KR", {
+    month: "long",
+    day: "numeric",
+    weekday: "long",
+  });
+  return formatter.format(new Date());
 }
 
 function toMinutes(time) {
