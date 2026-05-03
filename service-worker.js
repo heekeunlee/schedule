@@ -1,4 +1,4 @@
-const CACHE_NAME = "weekly-schedule-v13";
+const CACHE_NAME = "weekly-schedule-v14";
 const APP_ASSETS = [
   "./",
   "index.html",
