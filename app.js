@@ -51,15 +51,15 @@ const versions = [
       e("sechan", "월", "14:30", "15:00", "드럼", "music"),
       e("sechan", "월", "15:30", "18:00", "영어", "english"),
       e("sechan", "화", "14:30", "15:30", "독서", "study"),
-      e("sechan", "화", "16:00", "17:30", "해법수학", "math"),
+      e("sechan", "화", "16:00", "17:30", "해법", "math"),
       e("sechan", "화", "18:00", "18:30", "테니스", "sports"),
       e("sechan", "수", "14:20", "15:30", "로봇과학", "science"),
-      e("sechan", "수", "16:30", "17:30", "해법수학", "math"),
+      e("sechan", "수", "16:30", "17:30", "해법", "math"),
       e("sechan", "목", "15:00", "15:30", "드럼", "music"),
-      e("sechan", "목", "16:00", "17:30", "해법수학", "math"),
+      e("sechan", "목", "16:00", "17:30", "해법", "math"),
       e("sechan", "목", "18:00", "18:30", "테니스", "sports"),
       e("sechan", "금", "14:40", "15:50", "생명과학", "science"),
-      e("sechan", "금", "16:30", "17:30", "해법수학", "math"),
+      e("sechan", "금", "16:30", "17:30", "해법", "math"),
     ],
   },
   {
@@ -287,6 +287,9 @@ function filteredEvents() {
 
 function eventsForDay(events, day, weekOffset = state.weekOffset) {
   const date = dateForDay(day, weekOffset);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return [];
   if (isOffDay(date)) return [];
   return sortEvents(events.filter((event) => isEventActiveOn(event, date)));
 }
@@ -415,6 +418,9 @@ function isOffDay(date) {
 }
 
 function emptyMessage(date) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (date < today) return "지난 일정은 표시하지 않습니다.";
   if (date.getDay() === 0) return "일요일은 일정이 없습니다.";
   if (KOREAN_HOLIDAYS_2026.has(dateKey(date))) return "공휴일은 일정이 없습니다.";
   return "일정이 없습니다.";
