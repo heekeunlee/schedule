@@ -67,6 +67,66 @@ p {
   margin: 0;
 }
 
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.week-nav {
+  display: flex;
+  background: #e2e8f0;
+  border-radius: 20px;
+  padding: 2px;
+}
+
+.week-nav button {
+  background: none;
+  border: none;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  color: #475569;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.week-nav button:hover {
+  background: #cbd5e1;
+  color: #1e293b;
+}
+
+.week-nav button:active {
+  transform: scale(0.9);
+}
+
+.week-toggle {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.week-toggle.is-week {
+  background: #6366f1;
+}
+
 h1 {
   font-size: clamp(26px, 7vw, 40px);
   line-height: 1;

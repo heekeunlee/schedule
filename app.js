@@ -48,21 +48,18 @@ const versions = [
 
       e("sechan", "토", "10:00", "11:00", "독서", "study"),
       e("sechan", "토", "12:00", "14:50", "필즈", "math"),
-      e("sechan", "월", "14:00", "15:30", "해법", "math"),
+      e("sechan", "월", "14:30", "15:00", "드럼", "music"),
+      e("sechan", "월", "15:30", "18:00", "영어", "english"),
+      e("sechan", "화", "14:30", "15:30", "독서", "study"),
+      e("sechan", "화", "16:00", "17:30", "해법", "math"),
+      e("sechan", "화", "18:00", "18:30", "테니스", "sports"),
       e("sechan", "수", "14:20", "15:30", "로봇과학", "science"),
+      e("sechan", "수", "15:30", "18:00", "영어", "english"),
+      e("sechan", "목", "15:00", "15:30", "드럼", "music"),
+      e("sechan", "목", "16:00", "17:30", "해법", "math"),
+      e("sechan", "목", "18:00", "18:30", "테니스", "sports"),
       e("sechan", "금", "14:40", "15:50", "생명과학", "science"),
-      e("sechan", "화", "15:30", "17:30", "수영", "sports"),
-      e("sechan", "목", "15:30", "17:30", "수영", "sports"),
-      e("sechan", "월", "16:00", "16:25", "드럼", "music"),
-      e("sechan", "토", "16:00", "16:25", "드럼", "music"),
-      e("sechan", "수", "16:20", "17:20", "독서", "study"),
-      e("sechan", "월", "17:30", "19:00", "영어", "english"),
-      e("sechan", "화", "17:30", "19:00", "해법", "math"),
-      e("sechan", "수", "17:30", "19:00", "영어", "english"),
-      e("sechan", "목", "17:30", "19:00", "해법", "math"),
-      e("sechan", "금", "17:30", "19:00", "영어", "english"),
-      e("sechan", "화", "18:00", "18:20", "테니스", "sports", { effectiveFrom: "2026-05-01" }),
-      e("sechan", "목", "18:00", "18:20", "테니스", "sports", { effectiveFrom: "2026-05-01" }),
+      e("sechan", "금", "15:30", "18:00", "영어", "english"),
     ],
   },
   {
@@ -152,10 +149,13 @@ const state = {
   person: "dawon",
   version: "latest",
   day: currentDayName(),
+  weekOffset: 0,
 };
 
 const content = document.querySelector("#content");
 const weekToggle = document.querySelector("#weekToggle");
+const prevWeek = document.querySelector("#prevWeek");
+const nextWeek = document.querySelector("#nextWeek");
 const todayText = document.querySelector("#todayText");
 const currentStatus = document.querySelector("#currentStatus");
 const nextStatus = document.querySelector("#nextStatus");
@@ -169,6 +169,8 @@ function init() {
 
   personButtons.forEach((button) => button.addEventListener("click", () => updateState("person", button.dataset.person)));
   weekToggle.addEventListener("click", () => setView(state.view === "day" ? "week" : "day"));
+  prevWeek.addEventListener("click", () => updateWeekOffset(-1));
+  nextWeek.addEventListener("click", () => updateWeekOffset(1));
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("service-worker.js").catch(() => {});
@@ -184,6 +186,11 @@ function setView(view) {
 
 function updateState(key, value) {
   state[key] = value;
+  render();
+}
+
+function updateWeekOffset(delta) {
+  state.weekOffset += delta;
   render();
 }
 
@@ -369,7 +376,7 @@ function formatDayDate(day) {
 function dateForDay(day) {
   const today = new Date();
   const diff = DAYS.indexOf(day) - DAYS.indexOf(currentDayName());
-  return new Date(today.getFullYear(), today.getMonth(), today.getDate() + diff);
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate() + diff + state.weekOffset * 7);
 }
 
 function isEventActiveOn(event, date) {

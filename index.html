@@ -17,7 +17,13 @@
           <p class="eyebrow">Schedule</p>
           <div class="title-row">
             <h1>오늘의 스케줄</h1>
-            <button class="week-toggle" id="weekToggle" type="button">주간</button>
+            <div class="header-actions">
+              <div class="week-nav">
+                <button id="prevWeek" type="button" aria-label="이전 주">&lt;</button>
+                <button id="nextWeek" type="button" aria-label="다음 주">&gt;</button>
+              </div>
+              <button class="week-toggle" id="weekToggle" type="button">주간</button>
+            </div>
           </div>
           <p class="today-text" id="todayText"></p>
         </div>
