@@ -210,22 +210,28 @@ function render() {
 }
 
 function renderDay(events) {
+  const weeks = [state.weekOffset - 1, state.weekOffset, state.weekOffset + 1];
   content.innerHTML = `
     <div class="day-carousel" id="dayCarousel" aria-label="요일별 일간 일정">
-      ${DAYS.map((day) => {
-        const dayEvents = eventsForDay(events, day);
-        return `
-          <section class="day-panel" aria-label="${day}요일 일정">
+      ${weeks
+        .map((w) =>
+          DAYS.map((day) => {
+            const dayEvents = eventsForDay(events, day, w);
+            const date = dateForDay(day, w);
+            return `
+          <section class="day-panel" data-day="${day}" data-week="${w}" aria-label="${day}요일 일정">
             <div class="day-panel-head">
-              <strong>${formatDayDate(day)}</strong>
+              <strong>${formatDayDate(date)}</strong>
               <span>${personLabel(state.person)}</span>
             </div>
             <div class="timeline">
-              ${dayEvents.length ? dayEvents.map(eventCard).join("") : empty(emptyMessage(day))}
+              ${dayEvents.length ? dayEvents.map(eventCard).join("") : empty(emptyMessage(date))}
             </div>
           </section>
         `;
-      }).join("")}
+          }).join(""),
+        )
+        .join("")}
     </div>
   `;
   connectDayCarousel();
@@ -279,8 +285,8 @@ function filteredEvents() {
   return events.filter((event) => event.person === state.person);
 }
 
-function eventsForDay(events, day) {
-  const date = dateForDay(day);
+function eventsForDay(events, day, weekOffset = state.weekOffset) {
+  const date = dateForDay(day, weekOffset);
   if (isOffDay(date)) return [];
   return sortEvents(events.filter((event) => isEventActiveOn(event, date)));
 }
@@ -314,7 +320,7 @@ function updateStatus(events) {
 }
 
 function isCurrentEvent(event) {
-  const date = dateForDay(state.day);
+  const date = dateForDay(state.day, state.weekOffset);
   if (!isEventActiveOn(event, date)) return false;
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -325,26 +331,40 @@ function connectDayCarousel() {
   const carousel = document.querySelector("#dayCarousel");
   if (!carousel) return;
 
-  const index = DAYS.indexOf(state.day);
-  const panels = carousel.querySelectorAll(".day-panel");
-  if (panels[index]) {
-    panels[index].scrollIntoView({ behavior: "auto", block: "nearest", inline: "start" });
+  const panels = [...carousel.querySelectorAll(".day-panel")];
+  const currentIndex = panels.findIndex((p) => p.dataset.day === state.day && parseInt(p.dataset.week) === state.weekOffset);
+
+  if (panels[currentIndex]) {
+    panels[currentIndex].scrollIntoView({ behavior: "auto", block: "nearest", inline: "start" });
   }
 
   carousel.addEventListener("scroll", () => {
     window.clearTimeout(carouselScrollTimer);
     carouselScrollTimer = window.setTimeout(() => {
       const scrollPos = carousel.scrollLeft;
-      const panelWidth = carousel.querySelector(".day-panel").offsetWidth;
-      const gap = 12; // Matching the CSS gap
+      const panelWidth = panels[0].offsetWidth;
+      const gap = 12;
       const nextIndex = Math.round(scrollPos / (panelWidth + gap));
-      const nextDay = DAYS[Math.min(Math.max(nextIndex, 0), DAYS.length - 1)];
-      if (nextDay !== state.day) {
-        state.day = nextDay;
-        updateDateText();
-        updateStatus(filteredEvents());
+      const targetPanel = panels[nextIndex];
+
+      if (targetPanel) {
+        const nextDay = targetPanel.dataset.day;
+        const nextWeek = parseInt(targetPanel.dataset.week);
+
+        if (nextDay !== state.day || nextWeek !== state.weekOffset) {
+          state.day = nextDay;
+          const weekChanged = nextWeek !== state.weekOffset;
+          state.weekOffset = nextWeek;
+
+          if (weekChanged) {
+            render(); // Seamlessly re-centers the carousel
+          } else {
+            updateDateText();
+            updateStatus(filteredEvents());
+          }
+        }
       }
-    }, 80);
+    }, 100);
   });
 }
 
@@ -365,22 +385,22 @@ function currentDayName() {
 }
 
 function updateDateText() {
-  todayText.textContent = formatDayDate(state.day);
+  todayText.textContent = formatDayDate(dateForDay(state.day, state.weekOffset));
 }
 
-function formatDayDate(day) {
+function formatDayDate(date) {
   const formatter = new Intl.DateTimeFormat("ko-KR", {
     month: "long",
     day: "numeric",
     weekday: "long",
   });
-  return formatter.format(dateForDay(day));
+  return formatter.format(date);
 }
 
-function dateForDay(day) {
+function dateForDay(day, weekOffset = state.weekOffset) {
   const today = new Date();
   const diff = DAYS.indexOf(day) - DAYS.indexOf(currentDayName());
-  return new Date(today.getFullYear(), today.getMonth(), today.getDate() + diff + state.weekOffset * 7);
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate() + diff + weekOffset * 7);
 }
 
 function isEventActiveOn(event, date) {
@@ -394,8 +414,7 @@ function isOffDay(date) {
   return date.getDay() === 0 || KOREAN_HOLIDAYS_2026.has(dateKey(date));
 }
 
-function emptyMessage(day) {
-  const date = dateForDay(day);
+function emptyMessage(date) {
   if (date.getDay() === 0) return "일요일은 일정이 없습니다.";
   if (KOREAN_HOLIDAYS_2026.has(dateKey(date))) return "공휴일은 일정이 없습니다.";
   return "일정이 없습니다.";
