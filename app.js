@@ -119,6 +119,7 @@ function render() {
   personButtons.forEach((button) => button.classList.toggle("is-active", button.dataset.person === state.person));
   weekToggle.textContent = state.view === "day" ? "주간" : "일간";
   weekToggle.classList.toggle("is-week", state.view === "week");
+  prevWeek.disabled = state.weekOffset <= 0;
   updateDateText();
   updateProfileCounts(versionEvents);
 
@@ -131,13 +132,18 @@ function render() {
 
 function renderDay(events) {
   const weeks = [state.weekOffset - 1, state.weekOffset, state.weekOffset + 1];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   content.innerHTML = `
     <div class="day-carousel" id="dayCarousel" aria-label="요일별 일간 일정">
       ${weeks
-        .map((w) =>
+        .flatMap((w) =>
           DAYS.map((day) => {
-            const dayEvents = eventsForDay(events, day, w);
             const date = dateForDay(day, w);
+            if (date < today) return "";
+
+            const dayEvents = eventsForDay(events, day, w);
             return `
           <section class="day-panel" data-day="${day}" data-week="${w}" aria-label="${day}요일 일정">
             <div class="day-panel-head">
@@ -149,7 +155,7 @@ function renderDay(events) {
             </div>
           </section>
         `;
-          }).join(""),
+          }),
         )
         .join("")}
     </div>
@@ -158,6 +164,9 @@ function renderDay(events) {
 }
 
 function renderWeek(events) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   content.innerHTML = `
     <div class="section-head">
       <div>
@@ -166,11 +175,14 @@ function renderWeek(events) {
     </div>
     <div class="week-grid">
       ${DAYS.map((day) => {
+        const date = dateForDay(day, state.weekOffset);
+        if (date < today) return "";
+
         const dayEvents = eventsForDay(events, day);
         return `
           <article class="day-column">
             <h3>${day}</h3>
-            ${dayEvents.length ? dayEvents.map(compactEvent).join("") : `<span class="no-event">${emptyMessage(day)}</span>`}
+            ${dayEvents.length ? dayEvents.map(compactEvent).join("") : `<span class="no-event">${emptyMessage(date)}</span>`}
           </article>
         `;
       }).join("")}
@@ -272,7 +284,17 @@ function connectDayCarousel() {
   if (!carousel) return;
 
   const panels = [...carousel.querySelectorAll(".day-panel")];
-  const currentIndex = panels.findIndex((p) => p.dataset.day === state.day && parseInt(p.dataset.week) === state.weekOffset);
+  if (panels.length === 0) return;
+
+  let currentIndex = panels.findIndex((p) => p.dataset.day === state.day && parseInt(p.dataset.week) === state.weekOffset);
+
+  if (currentIndex === -1) {
+    currentIndex = 0;
+    state.day = panels[0].dataset.day;
+    state.weekOffset = parseInt(panels[0].dataset.week);
+    updateDateText();
+    updateStatus(filteredEvents());
+  }
 
   if (panels[currentIndex]) {
     panels[currentIndex].scrollIntoView({ behavior: "auto", block: "nearest", inline: "start" });
