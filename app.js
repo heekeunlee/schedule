@@ -313,17 +313,34 @@ function activeVersion() {
 function updateStatus(events) {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const dayEvents = eventsForDay(events, state.day);
-  const current = dayEvents.find((event) => toMinutes(event.start) <= nowMinutes && nowMinutes < toMinutes(event.end));
-  const next = dayEvents.find((event) => toMinutes(event.start) > nowMinutes);
+  const date = dateForDay(state.day, state.weekOffset);
+  const dayEvents = eventsForDay(events, state.day, state.weekOffset);
+
+  let current = null;
+  let next = null;
+
+  if (isToday(date)) {
+    current = dayEvents.find((event) => toMinutes(event.start) <= nowMinutes && nowMinutes < toMinutes(event.end));
+    next = dayEvents.find((event) => toMinutes(event.start) > nowMinutes);
+  } else if (date > now) {
+    next = dayEvents.length > 0 ? dayEvents[0] : null;
+  }
 
   currentStatus.textContent = current ? `${current.title} 진행중` : "진행중 없음";
   currentStatus.classList.toggle("is-live", Boolean(current));
   nextStatus.textContent = next ? `${next.start} ${next.title}` : "남은 일정 없음";
 }
 
+function isToday(date) {
+  const today = new Date();
+  return date.getFullYear() === today.getFullYear() &&
+         date.getMonth() === today.getMonth() &&
+         date.getDate() === today.getDate();
+}
+
 function isCurrentEvent(event) {
   const date = dateForDay(state.day, state.weekOffset);
+  if (!isToday(date)) return false;
   if (!isEventActiveOn(event, date)) return false;
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
