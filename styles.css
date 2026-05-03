@@ -321,6 +321,9 @@ h1 {
   scroll-behavior: smooth;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  margin: 0 -14px;
+  padding: 0 14px;
 }
 
 .day-carousel::-webkit-scrollbar {

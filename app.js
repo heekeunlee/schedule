@@ -326,14 +326,18 @@ function connectDayCarousel() {
   if (!carousel) return;
 
   const index = DAYS.indexOf(state.day);
-  requestAnimationFrame(() => {
-    carousel.scrollLeft = carousel.clientWidth * index;
-  });
+  const panels = carousel.querySelectorAll(".day-panel");
+  if (panels[index]) {
+    panels[index].scrollIntoView({ behavior: "auto", block: "nearest", inline: "start" });
+  }
 
   carousel.addEventListener("scroll", () => {
     window.clearTimeout(carouselScrollTimer);
     carouselScrollTimer = window.setTimeout(() => {
-      const nextIndex = Math.round(carousel.scrollLeft / carousel.clientWidth);
+      const scrollPos = carousel.scrollLeft;
+      const panelWidth = carousel.querySelector(".day-panel").offsetWidth;
+      const gap = 12; // Matching the CSS gap
+      const nextIndex = Math.round(scrollPos / (panelWidth + gap));
       const nextDay = DAYS[Math.min(Math.max(nextIndex, 0), DAYS.length - 1)];
       if (nextDay !== state.day) {
         state.day = nextDay;
